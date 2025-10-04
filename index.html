@@ -499,7 +499,11 @@
                 /[A-Za-z]:[\\][^\s"']*/g,  // Windows paths
                 /\/etc\/[^\s"']*/g,  // Linux system paths
                 /\/usr\/[^\s"']*/g,
-                /\/var\/[^\s"']*/g
+                /\/var\/[^\s"']*/g,
+                /\/home\/[^\s"']*/g,
+                /\/tmp\/[^\s"']*/g,
+                /\/opt\/[^\s"']*/g,
+                /\/root\/[^\s"']*/g
             ];
             
             let pathsFound = [];
@@ -508,13 +512,20 @@
                 pathsFound = pathsFound.concat(matches);
             });
             
-            if (pathsFound.length > 0) {
+            // Remove duplicates while preserving all paths
+            const uniquePaths = [...new Set(pathsFound)];
+            
+            if (uniquePaths.length > 0) {
                 findings.warnings.push({
                     type: 'File Paths',
-                    message: 'Suspicious file paths detected',
-                    details: [...new Set(pathsFound.slice(0, 10))]
+                    message: `Found ${uniquePaths.length} suspicious file path(s)`,
+                    details: uniquePaths  // ALL paths, no truncation
                 });
-                output.textContent += `  ⚠️ WARNING: Found ${pathsFound.length} file path(s)\n`;
+                output.textContent += `  ⚠️ WARNING: Found ${uniquePaths.length} file path(s)\n`;
+                output.textContent += `  Listing ALL detected paths:\n`;
+                uniquePaths.forEach((path, idx) => {
+                    output.textContent += `     ${idx + 1}. ${path}\n`;
+                });
             } else {
                 output.textContent += `  ✓ No suspicious paths\n`;
             }
@@ -630,12 +641,9 @@
                     html += `<li><strong>${f.type}:</strong> ${f.message}`;
                     if (f.details && f.details.length > 0) {
                         html += `<ul style="margin-top: 5px;">`;
-                        f.details.slice(0, 5).forEach(d => {
+                        f.details.forEach(d => {
                             html += `<li style="font-size: 12px;">${d}</li>`;
                         });
-                        if (f.details.length > 5) {
-                            html += `<li style="font-size: 12px;">... and ${f.details.length - 5} more</li>`;
-                        }
                         html += `</ul>`;
                     }
                     html += `</li>`;
@@ -660,13 +668,10 @@
                 findings.warnings.forEach(f => {
                     html += `<li><strong>${f.type}:</strong> ${f.message}`;
                     if (f.details && f.details.length > 0) {
-                        html += `<ul style="margin-top: 5px;">`;
-                        f.details.slice(0, 5).forEach(d => {
-                            html += `<li style="font-size: 12px;">${d}</li>`;
+                        html += `<ul style="margin-top: 5px; max-height: 400px; overflow-y: auto;">`;
+                        f.details.forEach(d => {
+                            html += `<li style="font-size: 12px; word-break: break-all;">${d}</li>`;
                         });
-                        if (f.details.length > 5) {
-                            html += `<li style="font-size: 12px;">... and ${f.details.length - 5} more</li>`;
-                        }
                         html += `</ul>`;
                     }
                     html += `</li>`;
